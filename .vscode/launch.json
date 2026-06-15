@@ -1,0 +1,22 @@
+{
+  "configurations": [
+    {
+      "type": "lldb",
+      "request": "launch",
+      "args": [],
+      "cwd": "${workspaceFolder:circle}",
+      "name": "Debug circle",
+      "program": "${workspaceFolder:circle}/.build/debug/circle",
+      "preLaunchTask": "swift: Build Debug circle"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "args": [],
+      "cwd": "${workspaceFolder:circle}",
+      "name": "Release circle",
+      "program": "${workspaceFolder:circle}/.build/release/circle",
+      "preLaunchTask": "swift: Build Release circle"
+    }
+  ]
+}

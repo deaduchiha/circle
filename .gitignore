@@ -1,0 +1,88 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Swift Package Manager
+.build/
+.swiftpm/
+Packages/
+*.xcodeproj
+*.xcworkspace
+xcuserdata/
+DerivedData/
+
+# Xcode build artifacts
+*.hmap
+*.ipa
+*.dSYM
+*.dSYM.zip
+*.xcuserstate
+*.xcscmblueprint
+*.xccheckout
+*.moved-aside
+*.perspectivev3
+*.mode1v3
+*.mode2v3
+*.pbxuser
+project.xcworkspace/xcuserdata/
+
+# Swift / compiler
+*.swiftmodule
+*.swiftdoc
+*.swiftsourceinfo
+
+# Test & coverage output
+*.gcno
+*.gcda
+*.profdata
+*.profraw
+.coverage
+coverage/
+TestResults/
+*.xcresult
+
+# Logs & temp files
+*.log
+*.tmp
+*.temp
+*~
+*.swp
+*.swo
+
+# Environment & secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.p12
+*.key
+*.cer
+*.crt
+secrets/
+credentials/
+
+# Local proxy profiles (keep bundled defaults in Resources/)
+*.local.conf
+Local*.conf
+
+# Dependency managers (if added later)
+Pods/
+Carthage/Build/
+vendor/bundle/
+
+# fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/**/*.png
+fastlane/test_output
+
+# IDE (optional local overrides)
+.idea/
+*.iml
+
+# Cursor / VS Code local state (keep shared .vscode/ config)
+.vscode/*.code-workspace
