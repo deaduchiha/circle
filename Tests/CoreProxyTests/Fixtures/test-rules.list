@@ -1,0 +1,3 @@
+DOMAIN-SUFFIX,blocked.test
+DOMAIN-KEYWORD,tracker
+IP-CIDR,10.0.0.0/8

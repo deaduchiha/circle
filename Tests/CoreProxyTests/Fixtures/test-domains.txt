@@ -1,0 +1,3 @@
+example.com
+cdn.example.com
+.ads-network.test
