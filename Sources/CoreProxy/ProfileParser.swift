@@ -100,8 +100,14 @@ public struct ProfileParser: Sendable {
       for rule in profile.rules {
         if rule.type == .final {
           lines.append("\(rule.type.rawValue), \(rule.policy)")
+        } else if rule.type == .and || rule.type == .or || rule.type == .not {
+          var parts = [rule.type.rawValue, rule.value, rule.policy]
+          parts.append(contentsOf: serializedRuleOptions(rule.options))
+          lines.append(parts.joined(separator: ", "))
         } else {
-          lines.append("\(rule.type.rawValue), \(rule.value), \(rule.policy)")
+          var parts = [rule.type.rawValue, rule.value, rule.policy]
+          parts.append(contentsOf: serializedRuleOptions(rule.options))
+          lines.append(parts.joined(separator: ", "))
         }
       }
     }
@@ -190,13 +196,33 @@ public struct ProfileParser: Sendable {
       return Rule(type: .final, policy: parts[1])
     }
 
+    if type == .and || type == .or || type == .not {
+      guard parts.count >= 3 else {
+        throw ProfileParserError.invalidRule(lineNumber, line)
+      }
+      return Rule(
+        type: type,
+        value: parts[1],
+        policy: parts[2],
+        options: parseRuleOptions(Array(parts.dropFirst(3)))
+      )
+    }
+
     guard parts.count >= 3 else {
       throw ProfileParserError.invalidRule(lineNumber, line)
     }
 
     return Rule(
       type: type, value: parts[1], policy: parts[2],
-      options: parseParameters(Array(parts.dropFirst(3))))
+      options: parseRuleOptions(Array(parts.dropFirst(3))))
+  }
+
+  private func parseRuleOptions(_ parts: [String]) -> [String: String] {
+    var options = parseParameters(parts.filter { $0.contains("=") })
+    for part in parts where !part.contains("=") {
+      options[part.lowercased()] = "true"
+    }
+    return options
   }
 
   private func parseDNS(_ line: String, into dns: inout DNSConfig, lineNumber: Int) throws {
@@ -255,6 +281,12 @@ public struct ProfileParser: Sendable {
         let value = part[part.index(after: equals)...].trimmingCharacters(in: .whitespaces)
         return (String(key), String(value))
       })
+  }
+
+  private func serializedRuleOptions(_ options: [String: String]) -> [String] {
+    options.sorted(by: { $0.key < $1.key }).map { key, value in
+      value == "true" && !key.contains("=") ? key : "\(key)=\(value)"
+    }
   }
 
   private func csvParts(_ line: String) -> [String] {

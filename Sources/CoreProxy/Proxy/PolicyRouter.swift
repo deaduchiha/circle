@@ -30,11 +30,22 @@ public enum PolicyRouter {
     }
   }
 
-  public static func evaluate(host: String, path: String, profile: Profile) -> (
-    route: ResolvedRoute, match: RuleMatch?
-  ) {
-    let match = RuleEngine(rules: profile.rules).evaluate(
-      RuleEvaluationContext(host: host, url: URL(string: "https://\(host)\(path)"))
+  public static func evaluate(
+    host: String,
+    path: String,
+    profile: Profile,
+    engine: RuleEngine? = nil,
+    processName: String? = nil,
+    ipAddress: String? = nil
+  ) -> (route: ResolvedRoute, match: RuleMatch?) {
+    let ruleEngine = engine ?? RuleEngine(rules: profile.rules)
+    let match = ruleEngine.evaluate(
+      RuleEvaluationContext(
+        host: host,
+        url: URL(string: "https://\(host)\(path)"),
+        processName: processName,
+        ipAddress: ipAddress
+      )
     )
     let policy = match?.policy ?? "DIRECT"
     return (resolve(policy: policy, in: profile), match)

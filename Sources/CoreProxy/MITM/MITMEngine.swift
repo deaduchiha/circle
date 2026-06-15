@@ -11,6 +11,7 @@ enum MITMEngine {
     _ channel: Channel,
     hostname: String,
     profile: Profile,
+    ruleEngine: RuleEngine,
     certificateManager: CertificateManager,
     onRequest: @escaping @Sendable (TrafficRequest) -> Void
   ) -> EventLoopFuture<Void> {
@@ -27,6 +28,7 @@ enum MITMEngine {
           MITMHTTPProxyHandler(
             hostname: hostname,
             profile: profile,
+            ruleEngine: ruleEngine,
             clientSSLContext: clientSSLContext,
             onRequest: onRequest
           )
@@ -49,6 +51,7 @@ private final class MITMHTTPProxyHandler: ChannelDuplexHandler {
 
   private let hostname: String
   private let profile: Profile
+  private let ruleEngine: RuleEngine
   private let clientSSLContext: NIOSSLContext
   private let onRequest: @Sendable (TrafficRequest) -> Void
 
@@ -60,11 +63,13 @@ private final class MITMHTTPProxyHandler: ChannelDuplexHandler {
   init(
     hostname: String,
     profile: Profile,
+    ruleEngine: RuleEngine,
     clientSSLContext: NIOSSLContext,
     onRequest: @escaping @Sendable (TrafficRequest) -> Void
   ) {
     self.hostname = hostname
     self.profile = profile
+    self.ruleEngine = ruleEngine
     self.clientSSLContext = clientSSLContext
     self.onRequest = onRequest
   }
@@ -93,7 +98,12 @@ private final class MITMHTTPProxyHandler: ChannelDuplexHandler {
     head: HTTPRequestHead, body: ByteBuffer, context: ChannelHandlerContext
   ) {
     let path = head.uri.contains("://") ? (URL(string: head.uri)?.path ?? head.uri) : head.uri
-    let evaluation = PolicyRouter.evaluate(host: hostname, path: path, profile: profile)
+    let evaluation = PolicyRouter.evaluate(
+      host: hostname,
+      path: path,
+      profile: profile,
+      engine: ruleEngine
+    )
 
     switch evaluation.route {
     case .reject:

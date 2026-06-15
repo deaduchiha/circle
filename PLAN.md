@@ -510,16 +510,16 @@ Complete the rule matching system and make profiles fully editable in-app.
 
 #### 2.1 Full rule engine
 
-- [ ] Implement all rule types from section 2.3
-- [ ] Trie-based domain matching for O(n) lookups on large domain lists
-- [ ] CIDR range matching (IPv4 and IPv6) using bitmasking
-- [ ] Regex compilation cache for `URL-REGEX` rules
-- [ ] `PROCESS-NAME` matching using `proc_pidinfo` (macOS) / `NEFilterDataProvider` (iOS)
-- [ ] `AND` / `OR` / `NOT` logical combinators
-- [ ] `RULE-SET` — download and cache external rule files
-- [ ] `DOMAIN-SET` — bulk load from newline-separated file
-- [ ] Rule test caching (cache match results per hostname, flush on network change)
-- [ ] Rule ordering: first match wins
+- [x] Implement all rule types from section 2.3 — *GEOIP uses injectable lookup; MaxMind bundle deferred to §2.2*
+- [x] Trie-based domain matching for O(n) lookups on large domain lists — *`DomainTrie` + `DomainSetIndex` for DOMAIN-SET*
+- [x] CIDR range matching (IPv4 and IPv6) using bitmasking
+- [x] Regex compilation cache for `URL-REGEX` rules
+- [x] `PROCESS-NAME` matching using `proc_pidinfo` (macOS) / `NEFilterDataProvider` (iOS) — *macOS via `ProcessNameMatcher`; iOS deferred*
+- [x] `AND` / `OR` / `NOT` logical combinators
+- [x] `RULE-SET` — download and cache external rule files
+- [x] `DOMAIN-SET` — bulk load from newline-separated file
+- [x] Rule test caching (cache match results per hostname, flush on network change)
+- [x] Rule ordering: first match wins
 
 #### 2.2 GeoIP integration
 

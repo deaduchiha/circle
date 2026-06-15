@@ -1,4 +1,13 @@
 {
   "lldb.library": "/Applications/Xcode.app/Contents/SharedFrameworks/LLDB.framework/Versions/A/LLDB",
-  "lldb.launch.expressions": "native"
+  "lldb.launch.expressions": "native",
+  "git.autoRepositoryDetection": false,
+  "git.repositoryScanIgnoredFolders": [
+    "node_modules",
+    ".build",
+    ".swiftpm",
+    "DerivedData",
+    "checkouts",
+    "index-build"
+  ]
 }

@@ -7,6 +7,7 @@ public struct ProxyServerConfiguration: Sendable {
   public var host: String
   public var port: Int
   public var profile: Profile
+  public var ruleEngine: RuleEngine
   public var certificateManager: CertificateManager
   public var onRequest: @Sendable (TrafficRequest) -> Void
 
@@ -14,12 +15,14 @@ public struct ProxyServerConfiguration: Sendable {
     host: String = "127.0.0.1",
     port: Int,
     profile: Profile,
+    ruleEngine: RuleEngine? = nil,
     certificateManager: CertificateManager = .shared,
     onRequest: @escaping @Sendable (TrafficRequest) -> Void
   ) {
     self.host = host
     self.port = port
     self.profile = profile
+    self.ruleEngine = ruleEngine ?? RuleEngine(rules: profile.rules)
     self.certificateManager = certificateManager
     self.onRequest = onRequest
   }
@@ -38,6 +41,7 @@ public final class ProxyServer: @unchecked Sendable {
 
   public func start() throws {
     let profile = configuration.profile
+    let ruleEngine = configuration.ruleEngine
     let certificateManager = configuration.certificateManager
     let onRequest = configuration.onRequest
 
@@ -58,6 +62,7 @@ public final class ProxyServer: @unchecked Sendable {
           try sync.addHandler(
             HTTPProxyHandler(
               profile: profile,
+              ruleEngine: ruleEngine,
               certificateManager: certificateManager,
               onRequest: onRequest
             ),
@@ -87,6 +92,7 @@ private final class HTTPProxyHandler: ChannelDuplexHandler, RemovableChannelHand
   typealias OutboundOut = HTTPServerResponsePart
 
   private let profile: Profile
+  private let ruleEngine: RuleEngine
   private let certificateManager: CertificateManager
   private let onRequest: @Sendable (TrafficRequest) -> Void
   private var requestHead: HTTPRequestHead?
@@ -95,10 +101,12 @@ private final class HTTPProxyHandler: ChannelDuplexHandler, RemovableChannelHand
 
   init(
     profile: Profile,
+    ruleEngine: RuleEngine,
     certificateManager: CertificateManager,
     onRequest: @escaping @Sendable (TrafficRequest) -> Void
   ) {
     self.profile = profile
+    self.ruleEngine = ruleEngine
     self.certificateManager = certificateManager
     self.onRequest = onRequest
   }
@@ -127,7 +135,12 @@ private final class HTTPProxyHandler: ChannelDuplexHandler, RemovableChannelHand
     head: HTTPRequestHead, body: ByteBuffer, context: ChannelHandlerContext
   ) {
     let target = parseTarget(from: head)
-    let evaluation = PolicyRouter.evaluate(host: target.host, path: target.path, profile: profile)
+    let evaluation = PolicyRouter.evaluate(
+      host: target.host,
+      path: target.path,
+      profile: profile,
+      engine: ruleEngine
+    )
 
     switch evaluation.route {
     case .reject:
@@ -207,6 +220,7 @@ private final class HTTPProxyHandler: ChannelDuplexHandler, RemovableChannelHand
           clientContext.channel,
           hostname: target.host,
           profile: self.profile,
+          ruleEngine: self.ruleEngine,
           certificateManager: self.certificateManager,
           onRequest: self.onRequest
         )

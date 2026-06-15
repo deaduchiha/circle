@@ -5,16 +5,24 @@ import UniformTypeIdentifiers
 
 @main
 struct CircleApp: App {
+    @NSApplicationDelegateAdaptor(CircleAppDelegate.self) private var appDelegate
     @StateObject private var controller = ProxyController()
 
     var body: some Scene {
-        WindowGroup {
+        WindowGroup("circle") {
             DashboardView()
                 .environmentObject(controller)
                 .frame(minWidth: 1120, minHeight: 720)
                 .background(StatusBarInstaller(controller: controller))
+                .onAppear {
+                    NSApp.activate(ignoringOtherApps: true)
+                }
         }
+        .defaultSize(width: 1120, height: 720)
         .windowStyle(.titleBar)
+        .commands {
+            CommandGroup(replacing: .newItem) {}
+        }
 
         Settings {
             SettingsView()

@@ -70,9 +70,11 @@ public final class ProxyController: ObservableObject {
   private var systemProxyEnabled = false
   private var bandwidthTimer: Timer?
   private let dashboardSnapshotCache = DashboardSnapshotCache()
+  private var ruleEngine: RuleEngine
 
   public init(profile: Profile = ProfileLoader.loadDefault(), requestLogStore: RequestLogStore? = nil) {
     self.profile = profile
+    self.ruleEngine = RuleEngine(rules: profile.rules)
     ProxyLogger.configure(logLevel: profile.general.logLevel)
 
     if let requestLogStore {
@@ -92,6 +94,7 @@ public final class ProxyController: ObservableObject {
 
   public func loadProfile(text: String) throws {
     profile = try parser.parse(text)
+    ruleEngine = RuleEngine(rules: profile.rules)
     requests.removeAll()
     try requestLogStore.clear()
     broadcastCleared()
@@ -111,6 +114,7 @@ public final class ProxyController: ObservableObject {
     log.info("Starting proxy", metadata: ["port": "\(profile.general.httpPort)"])
 
     let profileSnapshot = profile
+    let ruleEngineSnapshot = ruleEngine
     let port = profile.general.httpPort
     let dashboardPort = profile.general.dashboardPort
 
@@ -130,6 +134,7 @@ public final class ProxyController: ObservableObject {
           configuration: ProxyServerConfiguration(
             port: port,
             profile: profileSnapshot,
+            ruleEngine: ruleEngineSnapshot,
             onRequest: { request in
               Task { @MainActor in
                 self?.record(request)
@@ -195,9 +200,13 @@ public final class ProxyController: ObservableObject {
   }
 
   public func evaluate(host: String, path: String = "/") -> RuleMatch? {
-    RuleEngine(rules: profile.rules).evaluate(
+    ruleEngine.evaluate(
       RuleEvaluationContext(host: host, url: URL(string: "https://\(host)\(path)"))
     )
+  }
+
+  public func flushRuleCache() {
+    ruleEngine.flushCache()
   }
 
   public func record(_ request: TrafficRequest) {

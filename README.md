@@ -33,9 +33,20 @@ swift test
 
 ## Run
 
+**Recommended** — launches as a proper macOS app with a visible window:
+
+```sh
+./Scripts/run-app.sh
+```
+
+This builds the project, wraps the binary in `.build/Circle.app`, and opens it with macOS `open`.
+
+You can also run the raw binary from Terminal (logs stay in the terminal, window may open behind other apps):
+
 ```sh
 swift run circle
 ```
 
+If the window does not appear after `swift run circle`, click the **circle** icon in the Dock or use **Cmd+Tab** to switch to it. The menu bar network icon also provides **Open Dashboard**.
+
 The dashboard WebSocket API listens on `ws://127.0.0.1:8234` while the proxy is running. Connect and receive JSON messages (`snapshot`, `request`, `state`, `bandwidth`, `cleared`). Send `{"type":"clear"}` to clear the log remotely.
-# circle

@@ -59,6 +59,9 @@ public enum RuleType: String, Codable, CaseIterable, Sendable {
   case processName = "PROCESS-NAME"
   case urlRegex = "URL-REGEX"
   case ruleSet = "RULE-SET"
+  case and = "AND"
+  case or = "OR"
+  case not = "NOT"
   case final = "FINAL"
 }
 
