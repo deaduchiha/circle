@@ -195,7 +195,7 @@ private final class HTTPProxyHandler: ChannelDuplexHandler, RemovableChannelHand
         bytesOut: 0,
         policy: evaluation.match?.policy ?? "DIRECT",
         latencyMilliseconds: latency,
-        matchedRule: evaluation.match?.rule.type.rawValue
+        matchedRule: evaluation.match.map { RuleFormatter.summary($0.rule) }
       )
     )
   }

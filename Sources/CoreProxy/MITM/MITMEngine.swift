@@ -115,7 +115,7 @@ private final class MITMHTTPProxyHandler: ChannelDuplexHandler {
           statusCode: 403,
           bytesIn: body.readableBytes,
           policy: evaluation.match?.policy ?? "DIRECT",
-          matchedRule: evaluation.match?.rule.type.rawValue,
+          matchedRule: evaluation.match.map { RuleFormatter.summary($0.rule) },
           detail: TrafficRequestDetail(
             requestHeaders: TrafficCapture.headers(from: head),
             requestBody: TrafficCapture.bodyPreview(from: body)
@@ -132,7 +132,7 @@ private final class MITMHTTPProxyHandler: ChannelDuplexHandler {
           statusCode: 200,
           bytesIn: body.readableBytes,
           policy: evaluation.match?.policy ?? "DIRECT",
-          matchedRule: evaluation.match?.rule.type.rawValue,
+          matchedRule: evaluation.match.map { RuleFormatter.summary($0.rule) },
           detail: TrafficRequestDetail(
             requestHeaders: TrafficCapture.headers(from: head),
             requestBody: TrafficCapture.bodyPreview(from: body)
@@ -235,7 +235,7 @@ private final class MITMHTTPProxyHandler: ChannelDuplexHandler {
           host: self.hostname,
           path: path,
           policy: evaluation.match?.policy ?? "DIRECT",
-          matchedRule: evaluation.match?.rule.type.rawValue,
+          matchedRule: evaluation.match.map { RuleFormatter.summary($0.rule) },
           requestHead: requestHead,
           requestBody: requestBody,
           responseParts: parts

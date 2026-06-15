@@ -205,6 +205,23 @@ public final class ProxyController: ObservableObject {
     )
   }
 
+  public func testRule(host: String, path: String = "/") -> RuleTestResult {
+    let normalizedPath = path.hasPrefix("/") ? path : "/\(path)"
+    let evaluation = PolicyRouter.evaluate(
+      host: host,
+      path: normalizedPath,
+      profile: profile,
+      engine: ruleEngine
+    )
+    return RuleTestResult(
+      host: host.lowercased(),
+      path: normalizedPath,
+      policy: evaluation.match?.policy ?? "DIRECT",
+      ruleSummary: evaluation.match.map { RuleFormatter.summary($0.rule) },
+      routeDescription: RuleFormatter.routeDescription(evaluation.route)
+    )
+  }
+
   public func flushRuleCache() {
     ruleEngine.flushCache()
   }

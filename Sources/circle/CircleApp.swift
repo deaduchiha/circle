@@ -125,18 +125,7 @@ struct SidebarView: View {
                 Label("REJECT", systemImage: "xmark.octagon")
             }
 
-            Section("Rules") {
-                ForEach(controller.profile.rules) { rule in
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(rule.type.rawValue)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        Text(rule.type == .final ? rule.policy : "\(rule.value) -> \(rule.policy)")
-                            .lineLimit(1)
-                    }
-                    .padding(.vertical, 2)
-                }
-            }
+            RulesSidebarSection(rules: controller.profile.rules)
         }
         .listStyle(.sidebar)
         .safeAreaInset(edge: .bottom) {
@@ -214,8 +203,16 @@ struct RequestTableView: View {
                 Text(formatBytes(request.bytesIn + request.bytesOut))
             }
             .width(72)
-            TableColumn("Policy", value: \.policy)
-                .width(92)
+            TableColumn("Policy") { request in
+                PolicyBadge(policy: request.policy)
+            }
+            .width(100)
+            TableColumn("Rule") { request in
+                Text(request.matchedRule ?? "-")
+                    .lineLimit(1)
+                    .help(request.matchedRule ?? "")
+            }
+            .width(min: 120, ideal: 180)
             TableColumn("Latency") { request in
                 Text(request.latencyMilliseconds.map { "\($0) ms" } ?? "-")
             }
@@ -247,16 +244,30 @@ struct RequestDetailView: View {
                                 .foregroundStyle(.secondary)
                         }
                         Spacer()
-                        Text(request.policy)
-                            .font(.headline)
+                        PolicyBadge(policy: request.policy)
                     }
 
                     Grid(alignment: .leading, horizontalSpacing: 24, verticalSpacing: 10) {
                         DetailCell("Status", request.statusCode.map(String.init) ?? "-")
-                        DetailCell("Rule", request.matchedRule ?? "-")
+                        DetailCell("Route", request.policy)
                         DetailCell("Bytes In", "\(request.bytesIn)")
                         DetailCell("Bytes Out", "\(request.bytesOut)")
                         DetailCell("Latency", request.latencyMilliseconds.map { "\($0) ms" } ?? "-")
+                    }
+
+                    if let matchedRule = request.matchedRule {
+                        Divider()
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Matched Rule")
+                                .font(.headline)
+                            Text(matchedRule)
+                                .font(.system(.caption, design: .monospaced))
+                                .textSelection(.enabled)
+                                .padding(8)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .background(Color(nsColor: .textBackgroundColor))
+                                .clipShape(RoundedRectangle(cornerRadius: 8))
+                        }
                     }
 
                     if let timing = request.detail?.timing {
@@ -385,13 +396,53 @@ struct SettingsView: View {
     @EnvironmentObject private var controller: ProxyController
 
     var body: some View {
+        TabView {
+            generalTab
+                .tabItem { Label("General", systemImage: "gearshape") }
+            rulesTab
+                .tabItem { Label("Rules", systemImage: "list.bullet.rectangle") }
+            mitmTab
+                .tabItem { Label("MITM", systemImage: "lock.shield") }
+        }
+        .padding()
+        .frame(width: 620, height: 520)
+        .onAppear {
+            controller.refreshMITMStatus()
+        }
+    }
+
+    private var generalTab: some View {
         Form {
-            Section("General") {
+            Section("Proxy") {
                 LabeledContent("HTTP Port", value: "\(controller.profile.general.httpPort)")
                 LabeledContent("Dashboard Port", value: "\(controller.profile.general.dashboardPort)")
+                LabeledContent("Log Level", value: controller.profile.general.logLevel)
+                LabeledContent("State", value: controller.state.rawValue.capitalized)
             }
 
-            Section("MITM") {
+            Section("Profile") {
+                ProfileDocumentActions()
+            }
+        }
+        .formStyle(.grouped)
+    }
+
+    private var rulesTab: some View {
+        Form {
+            Section("Rule Tester") {
+                RuleTesterView()
+            }
+
+            Section("Active Rules") {
+                RulesProfileView(rules: controller.profile.rules)
+            }
+        }
+        .formStyle(.grouped)
+    }
+
+    private var mitmTab: some View {
+        Form {
+            Section("HTTPS Decryption") {
                 Toggle("Enable HTTPS Decryption", isOn: Binding(
                     get: { controller.profile.mitm.enabled },
                     set: { controller.profile.mitm.enabled = $0 }
@@ -435,11 +486,6 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .padding()
-        .frame(width: 520)
-        .onAppear {
-            controller.refreshMITMStatus()
-        }
     }
 
     private func exportCertificate() {
