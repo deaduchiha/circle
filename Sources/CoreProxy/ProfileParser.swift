@@ -72,6 +72,9 @@ public struct ProfileParser: Sendable {
       lines.append("socks-port = \(socksPort)")
     }
     lines.append("log-level = \(profile.general.logLevel)")
+    if let licenseKey = profile.general.geolite2LicenseKey, !licenseKey.isEmpty {
+      lines.append("geolite2-license-key = \(licenseKey)")
+    }
 
     if !profile.proxies.isEmpty {
       lines.append("")
@@ -90,7 +93,17 @@ public struct ProfileParser: Sendable {
       lines.append("")
       lines.append("[Proxy Group]")
       for group in profile.proxyGroups {
-        lines.append(([group.name, group.type.rawValue] + group.policies).joined(separator: ", "))
+        var parts = [group.name, group.type.rawValue] + group.policies
+        if let testURL = group.testURL, !testURL.isEmpty {
+          parts.append("url=\(testURL)")
+        }
+        if let testInterval = group.testInterval {
+          parts.append("interval=\(testInterval)")
+        }
+        if let tolerance = group.tolerance {
+          parts.append("tolerance=\(tolerance)")
+        }
+        lines.append(parts.joined(separator: ", "))
       }
     }
 
@@ -151,6 +164,8 @@ public struct ProfileParser: Sendable {
         general.dashboardPort = Int(value) ?? general.dashboardPort
       case "log-level":
         general.logLevel = value
+      case "geolite2-license-key":
+        general.geolite2LicenseKey = value
       default:
         break
       }
@@ -183,7 +198,36 @@ public struct ProfileParser: Sendable {
       throw ProfileParserError.invalidLine(lineNumber, line)
     }
 
-    return PolicyGroup(name: parts[0], type: type, policies: Array(parts.dropFirst(2)))
+    var policies: [String] = []
+    var testURL: String?
+    var testInterval: Int?
+    var tolerance: Int?
+
+    for part in parts.dropFirst(2) {
+      if part.contains("=") {
+        let parameters = parseParameters([part])
+        if let value = parameters["url"] {
+          testURL = value
+        }
+        if let value = parameters["interval"], let interval = Int(value) {
+          testInterval = interval
+        }
+        if let value = parameters["tolerance"], let amount = Int(value) {
+          tolerance = amount
+        }
+      } else {
+        policies.append(part)
+      }
+    }
+
+    return PolicyGroup(
+      name: parts[0],
+      type: type,
+      policies: policies,
+      testURL: testURL,
+      testInterval: testInterval,
+      tolerance: tolerance
+    )
   }
 
   private func parseRule(_ line: String, lineNumber: Int) throws -> Rule {

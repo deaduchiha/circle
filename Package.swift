@@ -17,6 +17,7 @@ let package = Package(
     .package(url: "https://github.com/apple/swift-certificates.git", from: "1.6.0"),
     .package(url: "https://github.com/apple/swift-log.git", from: "1.5.0"),
     .package(url: "https://github.com/groue/GRDB.swift.git", from: "6.29.0"),
+    .package(url: "https://github.com/SunboyGo/MaxMindDBSwift.git", from: "1.1.2"),
   ],
   targets: [
     .target(
@@ -30,6 +31,7 @@ let package = Package(
         .product(name: "NIOWebSocket", package: "swift-nio"),
         .product(name: "Logging", package: "swift-log"),
         .product(name: "GRDB", package: "GRDB.swift"),
+        .product(name: "MaxMindDB", package: "MaxMindDBSwift"),
       ],
       resources: [
         .process("../../Resources")

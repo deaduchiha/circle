@@ -36,15 +36,17 @@ public struct GeneralConfig: Codable, Equatable, Sendable {
   public var socksPort: Int?
   public var dashboardPort: Int
   public var logLevel: String
+  public var geolite2LicenseKey: String?
 
   public init(
     httpPort: Int = 8888, socksPort: Int? = nil, dashboardPort: Int = 8234,
-    logLevel: String = "info"
+    logLevel: String = "info", geolite2LicenseKey: String? = nil
   ) {
     self.httpPort = httpPort
     self.socksPort = socksPort
     self.dashboardPort = dashboardPort
     self.logLevel = logLevel
+    self.geolite2LicenseKey = geolite2LicenseKey
   }
 }
 
@@ -133,17 +135,44 @@ public struct PolicyGroup: Codable, Equatable, Identifiable, Sendable {
   public var type: PolicyGroupType
   public var policies: [String]
   public var selectedPolicy: String?
+  public var testURL: String?
+  public var testInterval: Int?
+  public var tolerance: Int?
 
   public init(
     id: UUID = UUID(), name: String, type: PolicyGroupType, policies: [String],
-    selectedPolicy: String? = nil
+    selectedPolicy: String? = nil, testURL: String? = nil, testInterval: Int? = nil,
+    tolerance: Int? = nil
   ) {
     self.id = id
     self.name = name
     self.type = type
     self.policies = policies
     self.selectedPolicy = selectedPolicy
+    self.testURL = testURL
+    self.testInterval = testInterval
+    self.tolerance = tolerance
   }
+
+  public var effectiveTestURL: String {
+    testURL ?? PolicyGroupDefaults.testURL
+  }
+
+  public var effectiveTestInterval: Int {
+    testInterval ?? PolicyGroupDefaults.testInterval
+  }
+
+  public var effectiveTolerance: Int {
+    tolerance ?? PolicyGroupDefaults.tolerance
+  }
+}
+
+public enum PolicyGroupDefaults {
+  public static let testURL = "http://cp.cloudflare.com/generate_204"
+  public static let testInterval = 300
+  public static let tolerance = 50
+  public static let unavailableTTL: TimeInterval = 60
+  public static let testTimeout: TimeInterval = 5
 }
 
 public struct DNSConfig: Codable, Equatable, Sendable {
@@ -204,5 +233,60 @@ public struct ScriptConfig: Codable, Equatable, Identifiable, Sendable {
     self.name = name
     self.event = event
     self.path = path
+  }
+}
+
+public struct ProfileModuleSettings: Codable, Equatable, Sendable {
+  public var proxies: Bool
+  public var proxyGroups: Bool
+  public var rules: Bool
+  public var hosts: Bool
+  public var dns: Bool
+  public var mitm: Bool
+  public var scripts: Bool
+
+  public init(
+    proxies: Bool = true,
+    proxyGroups: Bool = true,
+    rules: Bool = true,
+    hosts: Bool = true,
+    dns: Bool = true,
+    mitm: Bool = true,
+    scripts: Bool = true
+  ) {
+    self.proxies = proxies
+    self.proxyGroups = proxyGroups
+    self.rules = rules
+    self.hosts = hosts
+    self.dns = dns
+    self.mitm = mitm
+    self.scripts = scripts
+  }
+
+  public static let allEnabled = ProfileModuleSettings()
+}
+
+public struct ProfileDocument: Codable, Identifiable, Equatable, Sendable {
+  public var id: UUID
+  public var name: String
+  public var sourceURL: String?
+  public var modules: ProfileModuleSettings
+  public var createdAt: Date
+  public var updatedAt: Date
+
+  public init(
+    id: UUID = UUID(),
+    name: String,
+    sourceURL: String? = nil,
+    modules: ProfileModuleSettings = .allEnabled,
+    createdAt: Date = Date(),
+    updatedAt: Date = Date()
+  ) {
+    self.id = id
+    self.name = name
+    self.sourceURL = sourceURL
+    self.modules = modules
+    self.createdAt = createdAt
+    self.updatedAt = updatedAt
   }
 }

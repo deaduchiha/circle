@@ -22,6 +22,25 @@ struct CircleApp: App {
         .windowStyle(.titleBar)
         .commands {
             CommandGroup(replacing: .newItem) {}
+            CommandGroup(after: .appSettings) {
+                Button("Test Rule…") {
+                    NotificationCenter.default.post(
+                        name: .circleOpenPanel,
+                        object: nil,
+                        userInfo: ["panel": DashboardPanel.rules.rawValue]
+                    )
+                }
+                .keyboardShortcut("t", modifiers: [.command, .shift])
+
+                Button("Edit Profiles…") {
+                    NotificationCenter.default.post(
+                        name: .circleOpenPanel,
+                        object: nil,
+                        userInfo: ["panel": DashboardPanel.profiles.rawValue]
+                    )
+                }
+                .keyboardShortcut("p", modifiers: [.command, .shift])
+            }
         }
 
         Settings {
@@ -38,6 +57,7 @@ struct DashboardView: View {
     @State private var query = ""
     @State private var policyFilter = "All"
     @State private var statusFilter = "All"
+    @State private var activePanel: DashboardPanel?
 
     private var policyOptions: [String] {
         var options = Set(controller.requests.map(\.policy))
@@ -96,13 +116,75 @@ struct DashboardView: View {
                 RequestTableView(requests: filteredRequests, selection: $selection)
             }
         } detail: {
-            RequestDetailView(request: selectedRequest)
+            RequestDetailView(
+                request: selectedRequest,
+                onStart: { controller.start() },
+                onOpenRules: { activePanel = .rules },
+                onOpenSettings: { activePanel = .settings }
+            )
+        }
+        .toolbar {
+            ToolbarItemGroup(placement: .navigation) {
+                if let profile = controller.profileDocuments.first(where: { $0.id == controller.activeProfileID }) {
+                    Text(profile.name)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            ToolbarItemGroup(placement: .primaryAction) {
+                Button {
+                    controller.state == .running ? controller.stop() : controller.start()
+                } label: {
+                    Label(
+                        controller.state == .running ? "Stop" : "Start",
+                        systemImage: controller.state == .running ? "pause.fill" : "play.fill"
+                    )
+                }
+                .help(controller.state == .running ? "Stop proxy" : "Start proxy on 127.0.0.1:8888")
+
+                Button { activePanel = .rules } label: {
+                    Label("Test Rule", systemImage: "questionmark.circle")
+                }
+                .help("Test which rule matches a host")
+
+                Button { activePanel = .policies } label: {
+                    Label("Policies", systemImage: "point.3.connected.trianglepath.dotted")
+                }
+                .help("Manage policy groups and latency tests")
+
+                Button { activePanel = .profiles } label: {
+                    Label("Profiles", systemImage: "doc.text")
+                }
+                .help("Edit profiles, rules, and proxies")
+
+                Button { activePanel = .mitm } label: {
+                    Label("HTTPS", systemImage: "lock.shield")
+                }
+                .help("HTTPS decryption (MITM)")
+
+                Button { activePanel = .settings } label: {
+                    Label("Settings", systemImage: "gearshape")
+                }
+                .help("GeoIP, import/export, and more")
+            }
+        }
+        .sheet(item: $activePanel) { panel in
+            DashboardPanelSheet(panel: panel)
+                .environmentObject(controller)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .circleOpenPanel)) { notification in
+            if let raw = notification.userInfo?["panel"] as? String,
+               let panel = DashboardPanel(rawValue: raw) {
+                activePanel = panel
+            }
         }
     }
 }
 
 struct SidebarView: View {
     @EnvironmentObject private var controller: ProxyController
+    @State private var activePanel: DashboardPanel?
 
     var body: some View {
         List {
@@ -115,17 +197,62 @@ struct SidebarView: View {
                 }
                 StatusRow(title: "HTTP", value: "127.0.0.1:\(controller.profile.general.httpPort)")
                 StatusRow(title: "Dashboard", value: "127.0.0.1:\(controller.profile.general.dashboardPort)")
+                if let profile = controller.profileDocuments.first(where: { $0.id == controller.activeProfileID }) {
+                    HStack {
+                        Text("Profile")
+                        Spacer()
+                        Text(profile.name)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+
+            if controller.state != .running {
+                Section {
+                    QuickStartCard(
+                        onStart: { controller.start() },
+                        onOpenRules: { activePanel = .rules },
+                        onOpenSettings: { activePanel = .profiles }
+                    )
+                    .listRowInsets(EdgeInsets(top: 8, leading: 8, bottom: 8, trailing: 8))
+                }
+            }
+
+            Section("Quick Actions") {
+                Button {
+                    activePanel = .rules
+                } label: {
+                    Label("Test Rule", systemImage: "questionmark.circle")
+                }
+                Button {
+                    activePanel = .policies
+                } label: {
+                    Label("Policy Groups", systemImage: "point.3.connected.trianglepath.dotted")
+                }
+                Button {
+                    activePanel = .profiles
+                } label: {
+                    Label("Edit Profile", systemImage: "doc.text")
+                }
+                Button {
+                    activePanel = .mitm
+                } label: {
+                    Label("HTTPS Decryption", systemImage: "lock.shield")
+                }
+                Button {
+                    activePanel = .settings
+                } label: {
+                    Label("Settings & GeoIP", systemImage: "gearshape")
+                }
             }
 
             Section("Policies") {
-                ForEach(controller.profile.proxyGroups) { group in
-                    Label(group.name, systemImage: "point.3.connected.trianglepath.dotted")
-                }
+                PolicyGroupsSidebarSection(onManage: { activePanel = .policies })
                 Label("DIRECT", systemImage: "arrow.right")
                 Label("REJECT", systemImage: "xmark.octagon")
             }
 
-            RulesSidebarSection(rules: controller.profile.rules)
+            RulesSidebarSection(rules: controller.profile.rules, onTest: { activePanel = .rules })
         }
         .listStyle(.sidebar)
         .safeAreaInset(edge: .bottom) {
@@ -136,8 +263,19 @@ struct SidebarView: View {
                     Label(controller.state == .running ? "Stop" : "Start", systemImage: controller.state == .running ? "pause.fill" : "play.fill")
                 }
                 .buttonStyle(.borderedProminent)
+
+                Button {
+                    activePanel = .settings
+                } label: {
+                    Image(systemName: "gearshape")
+                }
+                .help("Settings")
             }
             .padding()
+        }
+        .sheet(item: $activePanel) { panel in
+            DashboardPanelSheet(panel: panel)
+                .environmentObject(controller)
         }
     }
 }
@@ -228,6 +366,9 @@ struct RequestTableView: View {
 
 struct RequestDetailView: View {
     let request: TrafficRequest?
+    var onStart: (() -> Void)?
+    var onOpenRules: (() -> Void)?
+    var onOpenSettings: (() -> Void)?
 
     var body: some View {
         ScrollView {
@@ -296,16 +437,27 @@ struct RequestDetailView: View {
                             .foregroundStyle(.secondary)
                     }
                 } else {
-                    VStack(spacing: 8) {
+                    VStack(spacing: 16) {
                         Image(systemName: "network")
                             .font(.system(size: 42))
                             .foregroundStyle(.secondary)
                         Text("No Requests")
                             .font(.headline)
-                        Text("Start the proxy to capture traffic.")
+                        Text("Start the proxy to capture traffic from apps using the system proxy.")
                             .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+
+                        if let onStart, let onOpenRules, let onOpenSettings {
+                            QuickStartCard(
+                                onStart: onStart,
+                                onOpenRules: onOpenRules,
+                                onOpenSettings: onOpenSettings
+                            )
+                            .frame(maxWidth: 420)
+                        }
                     }
                     .frame(maxWidth: .infinity, minHeight: 320)
+                    .padding()
                 }
             }
             .padding(24)
@@ -399,13 +551,17 @@ struct SettingsView: View {
         TabView {
             generalTab
                 .tabItem { Label("General", systemImage: "gearshape") }
+            profilesTab
+                .tabItem { Label("Profiles", systemImage: "doc.text") }
+            policyGroupsTab
+                .tabItem { Label("Policies", systemImage: "point.3.connected.trianglepath.dotted") }
             rulesTab
                 .tabItem { Label("Rules", systemImage: "list.bullet.rectangle") }
             mitmTab
                 .tabItem { Label("MITM", systemImage: "lock.shield") }
         }
         .padding()
-        .frame(width: 620, height: 520)
+        .frame(width: 760, height: 680)
         .onAppear {
             controller.refreshMITMStatus()
         }
@@ -420,8 +576,70 @@ struct SettingsView: View {
                 LabeledContent("State", value: controller.state.rawValue.capitalized)
             }
 
+            Section("GeoIP") {
+                LabeledContent("Database Loaded", value: controller.geoIPStatus.isLoaded ? "Yes" : "No")
+                if let path = controller.geoIPStatus.databasePath {
+                    LabeledContent("Database Path") {
+                        Text((path as NSString).lastPathComponent)
+                            .font(.caption)
+                            .textSelection(.enabled)
+                            .help(path)
+                    }
+                }
+                if let modifiedAt = controller.geoIPStatus.modifiedAt {
+                    LabeledContent("Last Updated", value: modifiedAt.formatted(date: .abbreviated, time: .shortened))
+                }
+                LabeledContent("Needs Refresh", value: controller.geoIPStatus.isStale ? "Yes" : "No")
+
+                SecureField("MaxMind License Key", text: Binding(
+                    get: { controller.profile.general.geolite2LicenseKey ?? "" },
+                    set: { controller.setGeoLite2LicenseKey($0.isEmpty ? nil : $0) }
+                ))
+
+                HStack {
+                    Button("Update GeoIP Database") {
+                        controller.updateGeoIPDatabase()
+                    }
+
+                    Button("Refresh Status") {
+                        controller.refreshGeoIPStatus()
+                    }
+                }
+
+                if let error = controller.geoIPStatus.lastError {
+                    Text(error)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                Text("Place GeoLite2-Country.mmdb in Resources/ or set a MaxMind license key. The database auto-refreshes when older than 30 days.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
             Section("Profile") {
+                if let active = controller.profileDocuments.first(where: { $0.id == controller.activeProfileID }) {
+                    LabeledContent("Active Profile", value: active.name)
+                }
                 ProfileDocumentActions()
+            }
+        }
+        .formStyle(.grouped)
+    }
+
+    private var profilesTab: some View {
+        Form {
+            Section("Profile Library") {
+                ProfileManagementView()
+            }
+        }
+        .formStyle(.grouped)
+    }
+
+    private var policyGroupsTab: some View {
+        Form {
+            Section("Policy Groups") {
+                PolicyGroupsSettingsView()
             }
         }
         .formStyle(.grouped)

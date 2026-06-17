@@ -68,6 +68,7 @@ credentials/
 # Local proxy profiles (keep bundled defaults in Resources/)
 *.local.conf
 Local*.conf
+*.mmdb
 
 # Dependency managers (if added later)
 Pods/

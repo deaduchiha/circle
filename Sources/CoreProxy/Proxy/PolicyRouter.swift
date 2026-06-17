@@ -8,7 +8,11 @@ public enum ResolvedRoute: Equatable, Sendable {
 }
 
 public enum PolicyRouter {
-  public static func resolve(policy: String, in profile: Profile) -> ResolvedRoute {
+  public static func resolve(
+    policy: String,
+    in profile: Profile,
+    groupManager: PolicyGroupManager? = nil
+  ) -> ResolvedRoute {
     switch policy.uppercased() {
     case "DIRECT":
       return .direct
@@ -22,8 +26,11 @@ public enum PolicyRouter {
       }
 
       if let group = profile.proxyGroups.first(where: { $0.name == policy }) {
-        let next = group.selectedPolicy ?? group.policies.first ?? "DIRECT"
-        return resolve(policy: next, in: profile)
+        let next = groupManager?.selectMember(for: group, profile: profile)
+          ?? group.selectedPolicy
+          ?? group.policies.first
+          ?? "DIRECT"
+        return resolve(policy: next, in: profile, groupManager: groupManager)
       }
 
       return .direct
@@ -35,6 +42,7 @@ public enum PolicyRouter {
     path: String,
     profile: Profile,
     engine: RuleEngine? = nil,
+    groupManager: PolicyGroupManager? = nil,
     processName: String? = nil,
     ipAddress: String? = nil
   ) -> (route: ResolvedRoute, match: RuleMatch?) {
@@ -48,6 +56,6 @@ public enum PolicyRouter {
       )
     )
     let policy = match?.policy ?? "DIRECT"
-    return (resolve(policy: policy, in: profile), match)
+    return (resolve(policy: policy, in: profile, groupManager: groupManager), match)
   }
 }

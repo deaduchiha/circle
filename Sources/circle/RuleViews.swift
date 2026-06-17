@@ -29,6 +29,7 @@ struct RuleRowView: View {
 
 struct RulesSidebarSection: View {
   let rules: [Rule]
+  var onTest: (() -> Void)?
 
   var body: some View {
     Section {
@@ -40,6 +41,13 @@ struct RulesSidebarSection: View {
         ForEach(rules) { rule in
           RuleRowView(rule: rule)
         }
+      }
+
+      if let onTest {
+        Button(action: onTest) {
+          Label("Test Rule…", systemImage: "questionmark.circle")
+        }
+        .font(.caption)
       }
     } header: {
       HStack {
@@ -192,7 +200,7 @@ struct ProfileDocumentActions: View {
   private func exportProfile() {
     let panel = NSSavePanel()
     panel.title = "Export Profile"
-    panel.nameFieldStringValue = "profile.conf"
+    panel.nameFieldStringValue = exportFilename()
     panel.allowedContentTypes = [UTType(filenameExtension: "conf") ?? .plainText]
 
     guard panel.runModal() == .OK, let url = panel.url else { return }
@@ -202,5 +210,14 @@ struct ProfileDocumentActions: View {
     } catch {
       importError = error.localizedDescription
     }
+  }
+
+  private func exportFilename() -> String {
+    if let activeID = controller.activeProfileID,
+      let document = controller.profileDocuments.first(where: { $0.id == activeID })
+    {
+      return "\(document.name).conf"
+    }
+    return "profile.conf"
   }
 }

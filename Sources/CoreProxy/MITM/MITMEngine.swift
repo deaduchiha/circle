@@ -12,6 +12,7 @@ enum MITMEngine {
     hostname: String,
     profile: Profile,
     ruleEngine: RuleEngine,
+    policyGroupManager: PolicyGroupManager? = nil,
     certificateManager: CertificateManager,
     onRequest: @escaping @Sendable (TrafficRequest) -> Void
   ) -> EventLoopFuture<Void> {
@@ -29,6 +30,7 @@ enum MITMEngine {
             hostname: hostname,
             profile: profile,
             ruleEngine: ruleEngine,
+            policyGroupManager: policyGroupManager,
             clientSSLContext: clientSSLContext,
             onRequest: onRequest
           )
@@ -52,6 +54,7 @@ private final class MITMHTTPProxyHandler: ChannelDuplexHandler {
   private let hostname: String
   private let profile: Profile
   private let ruleEngine: RuleEngine
+  private let policyGroupManager: PolicyGroupManager?
   private let clientSSLContext: NIOSSLContext
   private let onRequest: @Sendable (TrafficRequest) -> Void
 
@@ -64,12 +67,14 @@ private final class MITMHTTPProxyHandler: ChannelDuplexHandler {
     hostname: String,
     profile: Profile,
     ruleEngine: RuleEngine,
+    policyGroupManager: PolicyGroupManager?,
     clientSSLContext: NIOSSLContext,
     onRequest: @escaping @Sendable (TrafficRequest) -> Void
   ) {
     self.hostname = hostname
     self.profile = profile
     self.ruleEngine = ruleEngine
+    self.policyGroupManager = policyGroupManager
     self.clientSSLContext = clientSSLContext
     self.onRequest = onRequest
   }
@@ -102,7 +107,8 @@ private final class MITMHTTPProxyHandler: ChannelDuplexHandler {
       host: hostname,
       path: path,
       profile: profile,
-      engine: ruleEngine
+      engine: ruleEngine,
+      groupManager: policyGroupManager
     )
 
     switch evaluation.route {

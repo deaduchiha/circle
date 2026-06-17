@@ -8,6 +8,7 @@ public struct ProxyServerConfiguration: Sendable {
   public var port: Int
   public var profile: Profile
   public var ruleEngine: RuleEngine
+  public var policyGroupManager: PolicyGroupManager?
   public var certificateManager: CertificateManager
   public var onRequest: @Sendable (TrafficRequest) -> Void
 
@@ -16,6 +17,7 @@ public struct ProxyServerConfiguration: Sendable {
     port: Int,
     profile: Profile,
     ruleEngine: RuleEngine? = nil,
+    policyGroupManager: PolicyGroupManager? = nil,
     certificateManager: CertificateManager = .shared,
     onRequest: @escaping @Sendable (TrafficRequest) -> Void
   ) {
@@ -23,6 +25,7 @@ public struct ProxyServerConfiguration: Sendable {
     self.port = port
     self.profile = profile
     self.ruleEngine = ruleEngine ?? RuleEngine(rules: profile.rules)
+    self.policyGroupManager = policyGroupManager
     self.certificateManager = certificateManager
     self.onRequest = onRequest
   }
@@ -42,6 +45,7 @@ public final class ProxyServer: @unchecked Sendable {
   public func start() throws {
     let profile = configuration.profile
     let ruleEngine = configuration.ruleEngine
+    let policyGroupManager = configuration.policyGroupManager
     let certificateManager = configuration.certificateManager
     let onRequest = configuration.onRequest
 
@@ -63,6 +67,7 @@ public final class ProxyServer: @unchecked Sendable {
             HTTPProxyHandler(
               profile: profile,
               ruleEngine: ruleEngine,
+              policyGroupManager: policyGroupManager,
               certificateManager: certificateManager,
               onRequest: onRequest
             ),
@@ -93,6 +98,7 @@ private final class HTTPProxyHandler: ChannelDuplexHandler, RemovableChannelHand
 
   private let profile: Profile
   private let ruleEngine: RuleEngine
+  private let policyGroupManager: PolicyGroupManager?
   private let certificateManager: CertificateManager
   private let onRequest: @Sendable (TrafficRequest) -> Void
   private var requestHead: HTTPRequestHead?
@@ -102,11 +108,13 @@ private final class HTTPProxyHandler: ChannelDuplexHandler, RemovableChannelHand
   init(
     profile: Profile,
     ruleEngine: RuleEngine,
+    policyGroupManager: PolicyGroupManager?,
     certificateManager: CertificateManager,
     onRequest: @escaping @Sendable (TrafficRequest) -> Void
   ) {
     self.profile = profile
     self.ruleEngine = ruleEngine
+    self.policyGroupManager = policyGroupManager
     self.certificateManager = certificateManager
     self.onRequest = onRequest
   }
@@ -139,7 +147,8 @@ private final class HTTPProxyHandler: ChannelDuplexHandler, RemovableChannelHand
       host: target.host,
       path: target.path,
       profile: profile,
-      engine: ruleEngine
+      engine: ruleEngine,
+      groupManager: policyGroupManager
     )
 
     switch evaluation.route {
@@ -221,6 +230,7 @@ private final class HTTPProxyHandler: ChannelDuplexHandler, RemovableChannelHand
           hostname: target.host,
           profile: self.profile,
           ruleEngine: self.ruleEngine,
+          policyGroupManager: self.policyGroupManager,
           certificateManager: self.certificateManager,
           onRequest: self.onRequest
         )
@@ -272,7 +282,10 @@ private final class HTTPProxyHandler: ChannelDuplexHandler, RemovableChannelHand
       .flatMap { outbound in
         self.installRelay(client: clientContext.channel, remote: outbound)
       }
-      .whenFailure { _ in
+      .whenFailure { [policyGroupManager] _ in
+        if let proxy {
+          policyGroupManager?.markUnavailable(proxy.name)
+        }
         self.respond(
           context: clientContext, status: .badGateway, body: "Unable to establish tunnel")
       }
@@ -314,7 +327,10 @@ private final class HTTPProxyHandler: ChannelDuplexHandler, RemovableChannelHand
       .flatMap { outbound in
         self.installRelay(client: context.channel, remote: outbound)
       }
-      .whenFailure { _ in
+      .whenFailure { [policyGroupManager] _ in
+        if let proxy {
+          policyGroupManager?.markUnavailable(proxy.name)
+        }
         self.respond(context: context, status: .badGateway, body: "Unable to forward request")
       }
   }

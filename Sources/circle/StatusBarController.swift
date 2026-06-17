@@ -48,6 +48,23 @@ final class StatusBarController {
       action: #selector(openDashboard),
       keyEquivalent: ""
     )
+    menu.addItem(.separator())
+    menu.addItem(
+      withTitle: "Test Rule…",
+      action: #selector(openRuleTester),
+      keyEquivalent: ""
+    )
+    menu.addItem(
+      withTitle: "Edit Profiles…",
+      action: #selector(openProfiles),
+      keyEquivalent: ""
+    )
+    menu.addItem(
+      withTitle: "Settings…",
+      action: #selector(openSettings),
+      keyEquivalent: ","
+    )
+    menu.addItem(.separator())
     menu.addItem(
       withTitle: "Quit",
       action: #selector(quit),
@@ -59,6 +76,27 @@ final class StatusBarController {
     }
 
     return menu
+  }
+
+  @objc private func openRuleTester() {
+    postPanel(.rules)
+  }
+
+  @objc private func openProfiles() {
+    postPanel(.profiles)
+  }
+
+  @objc private func openSettings() {
+    postPanel(.settings)
+  }
+
+  private func postPanel(_ panel: DashboardPanel) {
+    NotificationCenter.default.post(
+      name: .circleOpenPanel,
+      object: nil,
+      userInfo: ["panel": panel.rawValue]
+    )
+    openDashboard()
   }
 
   @objc private func toggleProxy() {

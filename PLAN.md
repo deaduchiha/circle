@@ -523,10 +523,10 @@ Complete the rule matching system and make profiles fully editable in-app.
 
 #### 2.2 GeoIP integration
 
-- [ ] Bundle MaxMind GeoLite2-Country.mmdb in app resources
-- [ ] Swift wrapper around mmdb-swift or custom reader
-- [ ] `GEOIP,CN,DIRECT` type rules
-- [ ] Auto-update DB (download newer mmdb on launch if >30 days old)
+- [x] Bundle MaxMind GeoLite2-Country.mmdb in app resources — *via `Resources/` + `Scripts/download-geolite2.sh`; `.mmdb` gitignored*
+- [x] Swift wrapper around mmdb-swift or custom reader — *`GeoIPService` using MaxMindDBSwift*
+- [x] `GEOIP,CN,DIRECT` type rules — *wired through `GeoIPLookup` in `RuleEngine`*
+- [x] Auto-update DB (download newer mmdb on launch if >30 days old) — *`GeoIPDatabaseUpdater` + profile/env license key*
 
 #### 2.3 Policy groups
 
@@ -548,21 +548,21 @@ struct PolicyGroup: Codable {
 }
 ```
 
-- [ ] `url-test`: ping `testURL` through each proxy, rank by latency, auto-switch
-- [ ] `fallback`: try proxies in order, skip unavailable ones
-- [ ] `load-balance`: distribute connections round-robin across group members
-- [ ] Policy group UI: show latency badge per member, allow manual override
-- [ ] Background latency testing every `testInterval` seconds
+- [x] `url-test`: ping `testURL` through each proxy, rank by latency, auto-switch — *`ProxyLatencyTester` + `PolicyGroupManager`*
+- [x] `fallback`: try proxies in order, skip unavailable ones — *unavailability TTL on connect failure*
+- [x] `load-balance`: distribute connections round-robin across group members
+- [x] Policy group UI: show latency badge per member, allow manual override — *Settings → Policies tab + sidebar*
+- [x] Background latency testing every `testInterval` seconds — *30s scheduler in `ProxyController`*
 
 #### 2.4 Profile management
 
-- [ ] Profile list: create, duplicate, rename, delete
-- [ ] Import profile from URL (download `.conf` from remote)
-- [ ] Export profile to file
-- [ ] `#!include` support — merge external files into profile
-- [ ] Module system: enable/disable individual modules per profile
-- [ ] Profile editor: raw text editor with syntax highlighting (highlight rule types, comments)
-- [ ] iCloud sync of profiles (optional, behind feature flag)
+- [x] Profile list: create, duplicate, rename, delete — *`ProfileStore` + Settings → Profiles*
+- [x] Import profile from URL (download `.conf` from remote) — *`ProfileStore.importFromURL`*
+- [x] Export profile to file — *`ProfileDocumentActions` preserves raw editor text*
+- [x] `#!include` support — merge external files into profile — *`ProfileIncludeResolver`*
+- [x] Module system: enable/disable individual modules per profile — *`ProfileModuleSettings` + `ProfileModuleFilter`*
+- [x] Profile editor: raw text editor with syntax highlighting (highlight rule types, comments) — *`ProfileSyntaxTextEditor`*
+- [x] iCloud sync of profiles (optional, behind feature flag) — *`ProfileCloudSync` toggle migrates profile library*
 
 ---
 
