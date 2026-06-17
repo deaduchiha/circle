@@ -139,7 +139,17 @@ public struct ProfileParser: Sendable {
     if !profile.dnsConfig.dohServers.isEmpty {
       lines.append("doh-server = \(profile.dnsConfig.dohServers.joined(separator: ", "))")
     }
+    if !profile.dnsConfig.dotServers.isEmpty {
+      lines.append("dot-server = \(profile.dnsConfig.dotServers.joined(separator: ", "))")
+    }
+    if !profile.dnsConfig.defaultDomains.isEmpty {
+      lines.append("default-domain = \(profile.dnsConfig.defaultDomains.joined(separator: ", "))")
+    }
+    lines.append("hijack-dns = \(profile.dnsConfig.hijackDNS ? "true" : "false")")
     lines.append("fake-ip = \(profile.dnsConfig.fakeIPEnabled ? "true" : "false")")
+    if !profile.dnsConfig.fakeIPFilter.isEmpty {
+      lines.append("fake-ip-filter = \(profile.dnsConfig.fakeIPFilter.joined(separator: ", "))")
+    }
 
     lines.append("")
     lines.append("[MITM]")
@@ -276,8 +286,16 @@ public struct ProfileParser: Sendable {
         dns.servers = csvParts(value)
       case "doh-server":
         dns.dohServers = csvParts(value)
+      case "dot-server":
+        dns.dotServers = csvParts(value)
+      case "default-domain":
+        dns.defaultDomains = csvParts(value)
+      case "hijack-dns":
+        dns.hijackDNS = value.lowercased() == "true"
       case "fake-ip":
         dns.fakeIPEnabled = value.lowercased() == "true"
+      case "fake-ip-filter":
+        dns.fakeIPFilter = csvParts(value)
       default:
         break
       }

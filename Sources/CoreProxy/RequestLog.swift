@@ -65,6 +65,9 @@ public final class ProxyController: ObservableObject {
   @Published public private(set) var activeProfileID: UUID?
   @Published public var profileEditorText: String = ""
   @Published public var iCloudSyncEnabled: Bool = ProfileCloudSync.isFeatureEnabled
+  @Published public private(set) var dnsLookupResult: DNSLookupResult?
+  @Published public private(set) var dnsCacheEntries: [DNSCacheEntrySnapshot] = []
+  @Published public private(set) var dnsCacheCount: Int = 0
 
   private let parser = ProfileParser()
   private let profileStore: ProfileStore
@@ -72,6 +75,7 @@ public final class ProxyController: ObservableObject {
   private let bandwidthMonitor = BandwidthMonitor()
   private let requestLogStore: RequestLogStore
   private let geoIPService: GeoIPService
+  private let dnsService: DNSService
   private let policyGroupManager: PolicyGroupManager
   private let log = ProxyLogger.logger("controller")
   private var proxyServer: ProxyServer?
@@ -87,6 +91,7 @@ public final class ProxyController: ObservableObject {
     profile: Profile? = nil,
     requestLogStore: RequestLogStore? = nil,
     geoIPService: GeoIPService? = nil,
+    dnsService: DNSService? = nil,
     policyGroupManager: PolicyGroupManager? = nil,
     profileStore: ProfileStore? = nil
   ) {
@@ -116,6 +121,7 @@ public final class ProxyController: ObservableObject {
     self.profileEditorText = resolvedEditorText
 
     self.geoIPService = geoIPService ?? GeoIPService()
+    self.dnsService = dnsService ?? DNSService(config: resolvedProfile.dnsConfig, hosts: resolvedProfile.hosts)
     self.policyGroupManager = policyGroupManager ?? PolicyGroupManager()
 
     if let requestLogStore {
@@ -127,7 +133,10 @@ public final class ProxyController: ObservableObject {
 
     self.ruleEngine = RuleEngine(
       rules: resolvedProfile.rules,
-      configuration: RuleEngineConfiguration(geoIPLookup: self.geoIPService.lookup)
+      configuration: RuleEngineConfiguration(
+        geoIPLookup: self.geoIPService.lookup,
+        hostResolver: self.dnsService.hostResolver
+      )
     )
     ProxyLogger.configure(logLevel: resolvedProfile.general.logLevel)
 
@@ -139,6 +148,7 @@ public final class ProxyController: ObservableObject {
     syncPolicyGroupStates()
     refreshMITMStatus()
     refreshGeoIPStatus()
+    syncDNSCache()
     scheduleGeoIPRefreshIfNeeded()
     log.info("ProxyController initialized", metadata: ["requests": "\(requests.count)"])
   }
@@ -255,7 +265,7 @@ public final class ProxyController: ObservableObject {
   }
 
   private func applyLoadedProfile() {
-    rebuildRuleEngine()
+    updateDNSService()
     policyGroupManager.sync(from: profile)
     policyGroupLastTestRun.removeAll()
     syncPolicyGroupStates()
@@ -476,8 +486,45 @@ public final class ProxyController: ObservableObject {
   private func rebuildRuleEngine() {
     ruleEngine = RuleEngine(
       rules: profile.rules,
-      configuration: RuleEngineConfiguration(geoIPLookup: geoIPService.lookup)
+      configuration: RuleEngineConfiguration(
+        geoIPLookup: geoIPService.lookup,
+        hostResolver: dnsService.hostResolver
+      )
     )
+  }
+
+  public func lookupDNS(hostname: String, type: DNSRecordType = .a) {
+    Task {
+      do {
+        let result = try await dnsService.resolve(hostname: hostname, type: type)
+        await MainActor.run {
+          dnsLookupResult = result
+          syncDNSCache()
+          lastError = nil
+        }
+      } catch {
+        await MainActor.run {
+          dnsLookupResult = nil
+          lastError = error.localizedDescription
+        }
+      }
+    }
+  }
+
+  public func flushDNSCache() {
+    dnsService.flushCache()
+    syncDNSCache()
+  }
+
+  public func syncDNSCache() {
+    dnsCacheEntries = dnsService.cacheSnapshots()
+    dnsCacheCount = dnsService.cacheEntryCount
+  }
+
+  private func updateDNSService() {
+    dnsService.update(config: profile.dnsConfig, hosts: profile.hosts)
+    rebuildRuleEngine()
+    syncDNSCache()
   }
 
   private func scheduleGeoIPRefreshIfNeeded() {

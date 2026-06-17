@@ -3,17 +3,20 @@ import Foundation
 public struct RuleEngineConfiguration: Sendable {
   public var profileDirectory: URL?
   public var geoIPLookup: GeoIPLookup
+  public var hostResolver: HostResolver
   public var enableMatchCache: Bool
   public var cacheTTL: TimeInterval
 
   public init(
     profileDirectory: URL? = nil,
     geoIPLookup: GeoIPLookup = .none,
+    hostResolver: HostResolver = .system,
     enableMatchCache: Bool = true,
     cacheTTL: TimeInterval = 300
   ) {
     self.profileDirectory = profileDirectory
     self.geoIPLookup = geoIPLookup
+    self.hostResolver = hostResolver
     self.enableMatchCache = enableMatchCache
     self.cacheTTL = cacheTTL
   }

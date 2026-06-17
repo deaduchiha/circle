@@ -7,6 +7,7 @@ enum DashboardPanel: String, Identifiable {
   case profiles
   case policies
   case rules
+  case dns
   case mitm
 
   var id: String { rawValue }
@@ -17,6 +18,7 @@ enum DashboardPanel: String, Identifiable {
     case .profiles: "Profiles"
     case .policies: "Policy Groups"
     case .rules: "Rule Tester"
+    case .dns: "DNS"
     case .mitm: "HTTPS Decryption"
     }
   }
@@ -83,6 +85,12 @@ struct DashboardPanelSheet: View {
           .environmentObject(controller)
           .padding()
       }
+    case .dns:
+      ScrollView {
+        DNSLookupView()
+          .environmentObject(controller)
+          .padding()
+      }
     case .mitm:
       ScrollView {
         MITMSettingsPanel()
@@ -98,6 +106,7 @@ struct DashboardPanelSheet: View {
     case .profiles: CGSize(width: 780, height: 720)
     case .policies: CGSize(width: 520, height: 560)
     case .rules: CGSize(width: 560, height: 420)
+    case .dns: CGSize(width: 620, height: 560)
     case .mitm: CGSize(width: 560, height: 480)
     }
   }

@@ -594,12 +594,19 @@ struct DNSConfig: Codable {
 }
 ```
 
-- [ ] UDP DNS client (standard port 53)
-- [ ] DNS-over-HTTPS client (JSON and wire format)
-- [ ] DNS-over-TLS client (TLS wrapped UDP/TCP)
-- [ ] Query all configured servers simultaneously, use first response
-- [ ] DNS cache with TTL, max 10,000 entries, LRU eviction
+- [x] UDP DNS client (standard port 53) — *`UDPDNSClient`*
+- [x] DNS-over-HTTPS client (JSON and wire format) — *`DoHDNSClient`*
+- [x] DNS-over-TLS client (TLS wrapped UDP/TCP) — *`DoTDNSClient` via NIOSSL*
+- [x] Query all configured servers simultaneously, use first response — *`DNSResolverEngine` task group*
+- [x] DNS cache with TTL, max 10,000 entries, LRU eviction — *`DNSCache`*
 - [ ] Intercept DNS queries from TUN interface (Phase 5 prerequisite)
+
+#### 3.4 DNS UI
+
+- [x] DNS settings tab in Preferences — *Settings → DNS tab + toolbar DNS panel*
+- [x] DNS lookup tool in Dashboard: enter hostname, see all resolved records and which server responded
+- [x] DNS cache inspector: view and flush cache entries
+- [ ] Show per-request DNS timing in request detail view — *deferred until proxy captures DNS timing*
 
 #### 3.2 Local DNS mapping
 
@@ -616,13 +623,6 @@ struct DNSConfig: Codable {
 - [ ] When a TCP connection arrives at a fake IP: look up the real hostname, resolve via DNS, connect to real server
 - [ ] Excluded domains (`fakeip-filter`) resolve normally
 - [ ] Persist fake-IP mappings across sessions
-
-#### 3.4 DNS UI
-
-- [ ] DNS settings tab in Preferences
-- [ ] DNS lookup tool in Dashboard: enter hostname, see all resolved records and which server responded
-- [ ] DNS cache inspector: view and flush cache entries
-- [ ] Show per-request DNS timing in request detail view
 
 ---
 

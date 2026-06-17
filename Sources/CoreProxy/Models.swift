@@ -177,16 +177,29 @@ public enum PolicyGroupDefaults {
 
 public struct DNSConfig: Codable, Equatable, Sendable {
   public var servers: [String]
-  public var dohServers: [String]
+  public var defaultDomains: [String]
+  public var hijackDNS: Bool
   public var fakeIPEnabled: Bool
+  public var fakeIPFilter: [String]
+  public var dohServers: [String]
+  public var dotServers: [String]
 
   public init(
-    servers: [String] = ["1.1.1.1", "8.8.8.8"], dohServers: [String] = [],
-    fakeIPEnabled: Bool = false
+    servers: [String] = ["1.1.1.1", "8.8.8.8"],
+    defaultDomains: [String] = [],
+    hijackDNS: Bool = false,
+    fakeIPEnabled: Bool = false,
+    fakeIPFilter: [String] = [],
+    dohServers: [String] = [],
+    dotServers: [String] = []
   ) {
     self.servers = servers
-    self.dohServers = dohServers
+    self.defaultDomains = defaultDomains
+    self.hijackDNS = hijackDNS
     self.fakeIPEnabled = fakeIPEnabled
+    self.fakeIPFilter = fakeIPFilter
+    self.dohServers = dohServers
+    self.dotServers = dotServers
   }
 }
 

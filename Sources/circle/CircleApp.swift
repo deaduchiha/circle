@@ -148,6 +148,11 @@ struct DashboardView: View {
                 }
                 .help("Test which rule matches a host")
 
+                Button { activePanel = .dns } label: {
+                    Label("DNS", systemImage: "globe")
+                }
+                .help("DNS lookup and cache inspector")
+
                 Button { activePanel = .policies } label: {
                     Label("Policies", systemImage: "point.3.connected.trianglepath.dotted")
                 }
@@ -223,6 +228,11 @@ struct SidebarView: View {
                     activePanel = .rules
                 } label: {
                     Label("Test Rule", systemImage: "questionmark.circle")
+                }
+                Button {
+                    activePanel = .dns
+                } label: {
+                    Label("DNS Lookup", systemImage: "globe")
                 }
                 Button {
                     activePanel = .policies
@@ -557,6 +567,8 @@ struct SettingsView: View {
                 .tabItem { Label("Policies", systemImage: "point.3.connected.trianglepath.dotted") }
             rulesTab
                 .tabItem { Label("Rules", systemImage: "list.bullet.rectangle") }
+            dnsTab
+                .tabItem { Label("DNS", systemImage: "globe") }
             mitmTab
                 .tabItem { Label("MITM", systemImage: "lock.shield") }
         }
@@ -656,6 +668,21 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
+    }
+
+    private var dnsTab: some View {
+        Form {
+            Section("DNS Configuration") {
+                DNSSettingsSummaryView()
+            }
+            Section("Lookup & Cache") {
+                DNSLookupView()
+            }
+        }
+        .formStyle(.grouped)
+        .onAppear {
+            controller.syncDNSCache()
+        }
     }
 
     private var mitmTab: some View {

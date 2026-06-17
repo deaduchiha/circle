@@ -50,6 +50,7 @@ struct CompiledRuleEngine: Sendable {
   private let regexCache: RegexRuleCache
   private let matchCache: RuleMatchCache?
   private let geoIPLookup: GeoIPLookup
+  private let hostResolver: HostResolver
   private let domainSets: [String: DomainSetIndex]
   private let ruleSets: [String: RuleSetPatterns]
 
@@ -57,6 +58,7 @@ struct CompiledRuleEngine: Sendable {
     self.rules = rules
     self.regexCache = RegexRuleCache()
     self.geoIPLookup = configuration.geoIPLookup
+    self.hostResolver = configuration.hostResolver
     self.matchCache = configuration.enableMatchCache ? RuleMatchCache(ttl: configuration.cacheTTL) : nil
 
     var domainSets: [String: DomainSetIndex] = [:]
@@ -223,10 +225,10 @@ struct CompiledRuleEngine: Sendable {
     if rule.options["no-resolve"] != nil {
       return nil
     }
-    return Self.resolveHost(context.host)
+    return hostResolver.ipAddress(context.host) ?? Self.resolveHostWithSystemAPI(context.host)
   }
 
-  private static func resolveHost(_ host: String) -> String? {
+  private static func resolveHostWithSystemAPI(_ host: String) -> String? {
     var hints = addrinfo(
       ai_flags: AI_ADDRCONFIG,
       ai_family: AF_UNSPEC,
